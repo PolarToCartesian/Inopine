@@ -57,8 +57,11 @@
 
 #endif // #ifndef __IE__DISABLE_SIMD
 
-/* The "IE" namespace contains all of Inopine Engine's source code in order       */
-/* to prevent the clashing of declarations and definitions in the root namespace. */
+/* EN: The "IE" namespace contains all of Inopine Engine's source code in order          */
+/* EN: to prevent the conflicts of declarations and definitions in the root namespace.   */
+/* ------------------------------------------------------------------------------------- */
+/* FR: L'espace de nom "IE" contient le code source du moteur de rendu graphique Inopiné */
+/* FR: afin d'éviter les conflits de noms dans l'espace de nom à la racine.              */
 namespace IE {
 
     template <typename _T>
@@ -68,8 +71,10 @@ namespace IE {
     // | SIMD Wrapper |
     // +--------------+
 
-    /* The "Internal" namespace contains code that shall be hidden to any user of  */
-    /* the engine in order to keep the API simple and hide implementation details. */
+    /* EN: The "Internal" namespace contains code that shall be hidden to any user of  */
+    /* EN: the engine in order to keep the API simple and hide implementation details. */
+    /* FR: L'espace de nom "Internal" contient le code source du moteur graphique qui  */
+    /* FR: doit être caché des utilisateurs pour garder l'interface plus simple.       */
     namespace Internal {
 
         struct SIMDNoVectorRegister {  };
@@ -77,6 +82,13 @@ namespace IE {
         // +--------------+     +-----------------------+
         // | SIMD Wrapper | --> | SIMD Register Wrapper |
         // +--------------+     +-----------------------+
+
+        /* EN: The templated "using" definition "SIMDVectorRegister" is used to determine at compile- */
+        /* EN: -time the intrinsics' vector register type that corresponds to the template parameter. */
+        /* ------------------------------------------------------------------------------------------ */
+        /* FR: La définition à modèle de la déclaration "using" de "SIMDVectorRegister" nous permet   */
+        /* FR: de determiner le type du registre vectoriel qui correspond à l'argument modèle pendant */
+        /* FR: la compilation.                                                                        */
 
 #ifdef __IE__DISABLE_SIMD
 
@@ -93,9 +105,22 @@ namespace IE {
 
 #endif
         
+        /* EN: The concept named "SIMDVectorable" enables us to check wether or not a vector register can be */
+        /* EN: Found/Used/Created at compile-time.                                                           */
+        /* ------------------------------------------------------------------------------------------------- */
+        /* FR: Le concept "SIMDVectorable" nous permet de detecter si le registre vectoriel peut être        */
+        /* FR: Trouvé/Utilisé/Créé lors de la compilation.                                                   */
+
         template <typename _T>
         concept SIMDVectorable = !(std::is_same_v<::IE::Internal::SIMDVectorRegister<_T>,
                                                   ::IE::Internal::SIMDNoVectorRegister>);
+
+        /* EN: The role of the function "CAN_PERFORM_SIMD_VECTOR_OPERATIONS" is the same as the concept "SIMDVectorable" */
+        /* EN: but is defined as function "contexpr" function that can be ran at compile-time with two types.           */
+        /* ------------------------------------------------------------------------------------------------------------ */
+        /* FR: Le rôle de la function "CAN_PERFORM_SIMD_VECTOR_OPERATIONS" est le même que celui du concept             */
+        /* FR: "SIMDVectorable" mais elle est définie en tant qu'une fonction "contexpr" qui peut être exécutée lors    */
+        /* FR: de la compilation. */
 
         template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B = _T_A>
         static inline constexpr bool CAN_PERFORM_SIMD_VECTOR_OPERATIONS() noexcept
@@ -249,6 +274,15 @@ namespace IE {
     // +--------------+     +-------------+
     // | Math Library | --> | Vector (4D) |
     // +--------------+     +-------------+
+
+    /* EN: The templated "Vector" class represents a 4 dimensional mathematical vector of arithmitic types. This     */
+    /* EN: vector uses compile-time c++ "magic" to use SIMD intrinsics when possible and a "naive method" otherwise. */
+    /* EN: It also overloads the common mathematical operators like "+, -, *, and /" to make it easier to use.       */
+    /* ------------------------------------------------------------------------------------------------------------- */
+    /* FR: La classe modèle "Vector" représente un vecteur mathématique 4 dimensionel de type modèle arithmétiques.  */
+    /* FR: Ce vecteur utilise de la "magie" de c++ pour utiliser des instructions SIMD intrinsèques lors qu'il est   */
+    /* FR: possible et une méthode "naïve" sinon. Elle "surchage les opérateurs" communs comme "+, -, * et /" afin   */
+    /* FR: rendre son utilisation plus simple.                                                                       */
 
     template <::IE::arithmetic _T = int>
     class Vector {
@@ -505,8 +539,8 @@ namespace IE {
     // | Math Library | --> | Matrix (4x4) |
     // +--------------+     +--------------+
 
-    /*
-	 * Represents a row-major 4x4 matrix of "_T" values as shown below
+    /* [EN] Represents a row-major 4x4 matrix of "_T" values as shown below:
+     * [FR] Représente une matrice 4x4 de valeurs de types "_T" d'ordre de rangée principal comme:
 	 * |-------------------|-------------------|-------------------|-------------------|
 	 * | _T m00 (index 0)  | _T m01 (index 1)  | _T m02 (index 2)  | _T m03 (index 3)  |
 	 * | _T m10 (index 4)  | _T m11 (index 5)  | _T m12 (index 6)  | _T m13 (index 7)  |
