@@ -30,6 +30,8 @@
 
 #include <cmath>
 #include <array>       // Since C++11
+#include <limits>
+#include <cstdint>
 #include <cstring>
 #include <iomanip>
 #include <ostream>
@@ -60,8 +62,8 @@
 /* EN: The "IE" namespace contains all of Inopine Engine's source code in order          */
 /* EN: to prevent the conflicts of declarations and definitions in the root namespace.   */
 /* ------------------------------------------------------------------------------------- */
-/* FR: L'espace de nom "IE" contient le code source du moteur de rendu graphique Inopiné */
-/* FR: afin d'éviter les conflits de noms dans l'espace de nom à la racine.              */
+/* FR: L'espace de nom "IE" contient le code source du moteur de rendu graphique Inopinï¿½ */
+/* FR: afin d'ï¿½viter les conflits de noms dans l'espace de nom ï¿½ la racine.              */
 namespace IE {
 
     template <typename _T>
@@ -74,7 +76,7 @@ namespace IE {
     /* EN: The "Internal" namespace contains code that shall be hidden to any user of  */
     /* EN: the engine in order to keep the API simple and hide implementation details. */
     /* FR: L'espace de nom "Internal" contient le code source du moteur graphique qui  */
-    /* FR: doit être caché des utilisateurs pour garder l'interface plus simple.       */
+    /* FR: doit ï¿½tre cachï¿½ des utilisateurs pour garder l'interface plus simple.       */
     namespace Internal {
 
         struct SIMDNoVectorRegister {  };
@@ -86,8 +88,8 @@ namespace IE {
         /* EN: The templated "using" definition "SIMDVectorRegister" is used to determine at compile- */
         /* EN: -time the intrinsics' vector register type that corresponds to the template parameter. */
         /* ------------------------------------------------------------------------------------------ */
-        /* FR: La définition à modèle de la déclaration "using" de "SIMDVectorRegister" nous permet   */
-        /* FR: de determiner le type du registre vectoriel qui correspond à l'argument modèle pendant */
+        /* FR: La dï¿½finition ï¿½ modï¿½le de la dï¿½claration "using" de "SIMDVectorRegister" nous permet   */
+        /* FR: de determiner le type du registre vectoriel qui correspond ï¿½ l'argument modï¿½le pendant */
         /* FR: la compilation.                                                                        */
 
 #ifdef __IE__DISABLE_SIMD
@@ -108,8 +110,8 @@ namespace IE {
         /* EN: The concept named "SIMDVectorable" enables us to check wether or not a vector register can be */
         /* EN: Found/Used/Created at compile-time.                                                           */
         /* ------------------------------------------------------------------------------------------------- */
-        /* FR: Le concept "SIMDVectorable" nous permet de detecter si le registre vectoriel peut être        */
-        /* FR: Trouvé/Utilisé/Créé lors de la compilation.                                                   */
+        /* FR: Le concept "SIMDVectorable" nous permet de detecter si le registre vectoriel peut ï¿½tre        */
+        /* FR: Trouvï¿½/Utilisï¿½/Crï¿½ï¿½ lors de la compilation.                                                   */
 
         template <typename _T>
         concept SIMDVectorable = !(std::is_same_v<::IE::Internal::SIMDVectorRegister<_T>,
@@ -118,8 +120,8 @@ namespace IE {
         /* EN: The role of the function "CAN_PERFORM_SIMD_VECTOR_OPERATIONS" is the same as the concept "SIMDVectorable" */
         /* EN: but is defined as function "contexpr" function that can be ran at compile-time with two types.           */
         /* ------------------------------------------------------------------------------------------------------------ */
-        /* FR: Le rôle de la function "CAN_PERFORM_SIMD_VECTOR_OPERATIONS" est le même que celui du concept             */
-        /* FR: "SIMDVectorable" mais elle est définie en tant qu'une fonction "contexpr" qui peut être exécutée lors    */
+        /* FR: Le rï¿½le de la function "CAN_PERFORM_SIMD_VECTOR_OPERATIONS" est le mï¿½me que celui du concept             */
+        /* FR: "SIMDVectorable" mais elle est dï¿½finie en tant qu'une fonction "contexpr" qui peut ï¿½tre exï¿½cutï¿½e lors    */
         /* FR: de la compilation. */
 
         template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B = _T_A>
@@ -279,9 +281,9 @@ namespace IE {
     /* EN: vector uses compile-time c++ "magic" to use SIMD intrinsics when possible and a "naive method" otherwise. */
     /* EN: It also overloads the common mathematical operators like "+, -, *, and /" to make it easier to use.       */
     /* ------------------------------------------------------------------------------------------------------------- */
-    /* FR: La classe modèle "Vector" représente un vecteur mathématique 4 dimensionel de type modèle arithmétiques.  */
-    /* FR: Ce vecteur utilise de la "magie" de c++ pour utiliser des instructions SIMD intrinsèques lors qu'il est   */
-    /* FR: possible et une méthode "naïve" sinon. Elle "surchage les opérateurs" communs comme "+, -, * et /" afin   */
+    /* FR: La classe modï¿½le "Vector" reprï¿½sente un vecteur mathï¿½matique 4 dimensionel de type modï¿½le arithmï¿½tiques.  */
+    /* FR: Ce vecteur utilise de la "magie" de c++ pour utiliser des instructions SIMD intrinsï¿½ques lors qu'il est   */
+    /* FR: possible et une mï¿½thode "naï¿½ve" sinon. Elle "surchage les opï¿½rateurs" communs comme "+, -, * et /" afin   */
     /* FR: rendre son utilisation plus simple.                                                                       */
 
     template <::IE::arithmetic _T = int>
@@ -540,7 +542,7 @@ namespace IE {
     // +--------------+     +--------------+
 
     /* [EN] Represents a row-major 4x4 matrix of "_T" values as shown below:
-     * [FR] Représente une matrice 4x4 de valeurs de types "_T" d'ordre de rangée principal comme:
+     * [FR] Reprï¿½sente une matrice 4x4 de valeurs de types "_T" d'ordre de rangï¿½e principal comme:
 	 * |-------------------|-------------------|-------------------|-------------------|
 	 * | _T m00 (index 0)  | _T m01 (index 1)  | _T m02 (index 2)  | _T m03 (index 3)  |
 	 * | _T m10 (index 4)  | _T m11 (index 5)  | _T m12 (index 6)  | _T m13 (index 7)  |
@@ -793,5 +795,88 @@ namespace IE {
     // +--------------+     +--------------+     +-----------------+
 
 	typedef ::IE::Matrix<std::enable_if_t<std::numeric_limits<float>::is_iec559, float>> Matf32;
+
+    // +----------------------+
+    // | Error Checking Codes |
+    // +----------------------+
+
+    // +----------------------+     +--------+
+    // | Error Checking Codes | --> | CRC-32 |
+    // +----------------------+     +--------+
+
+    template <::IE::arithmetic _T, std::uint64_t _POLY>
+    struct CRC {
+        static _T Calculate(const std::uint8_t* data, const std::uint64_t len) noexcept
+        {
+            class CRCTable {
+            private:
+                std::array<_T, 256u> m_table;
+
+            public:
+                CRCTable() noexcept {
+                    // Calculate the CRC Table
+                    for (int dividend = 0u; dividend < m_table.size(); dividend++) {
+                        // Calculate Remainder With The Generator Polynomial
+                        _T remainder = dividend;
+
+                        for (int bit = 0u; bit < 8u; bit++) {
+                            if (remainder & 1)
+                                remainder = _POLY ^ (remainder >> 1u);
+                            else
+                                remainder >>= 1u;
+                        }
+
+                        this->m_table[dividend] = remainder;
+                    }
+                }
+
+                inline const _T& operator[](const std::uint16_t n) const noexcept { return this->m_table[n]; }
+            };
+
+            // Allocate & Generate The Static CRC Table
+            static const CRCTable crcTable;
+
+            /* EN: The "CRCTable" class is allocated as a "static" variable so that the crc look-up table                 */
+            /* EN: can be computed once per template paramater pair. This let's us compute the tables once                */
+            /* EN: and only when they are needed.                                                                         */
+            /* ---------------------------------------------------------------------------------------------------------- */
+            /* FR: La classe "CRCTable" est allouÃ©e en tant qu'objet statique afin que le tableau de "consultation"       */
+            /* FR: soit gÃ©nÃ©rÃ© une seule fois par instantiation de la fonction lors de la compilation pour chaque paire   */
+            /* FR: d'arguments modÃ¨les. Cela permet de limiter le nombre de calcul de ces tables et de ne les gÃ©nerer que */
+            /* FR: lorsque'elles sont nÃ©cessaires. */ 
+
+            // Calculate CRC Value
+            _T crcValue = std::numeric_limits<_T>::max();
+            for (const uint8_t* pCurrent = data; pCurrent < data + len; pCurrent++) {
+                const _T lookupValue = crcTable[(crcValue ^ *pCurrent) & std::numeric_limits<_T>::max()];
+
+                crcValue = lookupValue ^ (crcValue >> 8u);
+            }
+
+            return crcValue;
+        }
+    };
+
+    typedef ::IE::CRC<std::uint32_t, 0xEDB88320L> CRC32;
+
+    // +----------------------+     +----------+
+    // | Error Checking Codes | --> | ALDER-32 |
+    // +----------------------+     +----------+
+
+    struct ALDER32 {
+        static std::uint32_t Calculate(const std::uint8_t* data, const std::uint64_t len) noexcept
+        {
+            constexpr const std::uint64_t ALDER32Modulo = 65521u;
+
+            std::uint32_t low = 1u, high = 0u;
+
+            for (const std::uint8_t* pCurrent = data; pCurrent < data + len; pCurrent++) {
+                low  = (low  + *pCurrent) % ALDER32Modulo;
+                high = (high + low)       % ALDER32Modulo;
+            }
+
+            return (high << 16u) | low;
+        }
+    };
 
 }; // IE
