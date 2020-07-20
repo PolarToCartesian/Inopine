@@ -61,6 +61,9 @@
 /* to prevent the clashing of declarations and definitions in the root namespace. */
 namespace IE {
 
+    template <typename _T>
+    concept arithmetic = std::is_arithmetic_v<_T>;
+
     // +--------------+
     // | SIMD Wrapper |
     // +--------------+
@@ -69,7 +72,7 @@ namespace IE {
     /* the engine in order to keep the API simple and hide implementation details. */
     namespace Internal {
 
-        struct SIMD_REGISTER_TYPE_NONE {  };
+        struct SIMDNoVectorRegister {  };
 
         // +--------------+     +-----------------------+
         // | SIMD Wrapper | --> | SIMD Register Wrapper |
@@ -78,29 +81,29 @@ namespace IE {
 #ifdef __IE__DISABLE_SIMD
 
         template <typename _T>
-        using GET_SIMD_VECTOR_REGISTER_TYPE = SIMD_REGISTER_TYPE_NONE;
+        using SIMDVectorRegister = SIMDNoVectorRegister;
 
 #else
 
         template <typename _T>
-        using GET_SIMD_VECTOR_REGISTER_TYPE = typename std::conditional_t<std::is_same_v<_T, float>,   __m128,
-						                      typename std::conditional_t<std::is_same_v<_T, int32_t>, __m128i,
-						                      typename std::conditional_t<std::is_same_v<_T, int16_t>, __m128i,
-						                      typename std::conditional_t<std::is_same_v<_T, double>,  __m256d, ::IE::Internal::SIMD_REGISTER_TYPE_NONE>>>>;;
+        using SIMDVectorRegister = typename std::conditional_t<std::is_same_v<_T, float>,   __m128,
+						           typename std::conditional_t<std::is_same_v<_T, int32_t>, __m128i,
+						           typename std::conditional_t<std::is_same_v<_T, int16_t>, __m128i,
+						           typename std::conditional_t<std::is_same_v<_T, double>,  __m256d, ::IE::Internal::SIMDNoVectorRegister>>>>;;
 
 #endif
         
         template <typename _T>
-        concept SIMDVectorable = !(std::is_same_v<::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T>,
-                                                  ::IE::Internal::SIMD_REGISTER_TYPE_NONE>);
+        concept SIMDVectorable = !(std::is_same_v<::IE::Internal::SIMDVectorRegister<_T>,
+                                                  ::IE::Internal::SIMDNoVectorRegister>);
 
-        template <typename _T_A, typename _T_B = _T_A>
+        template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B = _T_A>
         static inline constexpr bool CAN_PERFORM_SIMD_VECTOR_OPERATIONS() noexcept
         {
-            using _REGISTER_A_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T_A>;
-            using _REGISTER_B_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T_B>;
+            using _REGISTER_A_TYPE = ::IE::Internal::SIMDVectorRegister<_T_A>;
+            using _REGISTER_B_TYPE = ::IE::Internal::SIMDVectorRegister<_T_B>;
 
-            return !std::is_same_v<_REGISTER_A_TYPE, SIMD_REGISTER_TYPE_NONE>
+            return !std::is_same_v<_REGISTER_A_TYPE, SIMDNoVectorRegister>
                 &&  std::is_same_v<_REGISTER_A_TYPE, _REGISTER_B_TYPE>;
         }
 
@@ -110,7 +113,7 @@ namespace IE {
         // | SIMD Wrapper | --> | SIMD Operations |
         // +--------------+     +-----------------+
 
-        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T>>
+        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::SIMDVectorRegister<_T>>
         static inline _VECTOR_REGISTER_TYPE SIMDSet(const _T& x, const _T& y, const _T& z, const _T& w) noexcept
         {
             if constexpr (std::is_same_v<_T, float>)
@@ -123,7 +126,7 @@ namespace IE {
                 return _mm256_set_pd(w, z, y, x);
         }
 
-        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T>>
+        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::SIMDVectorRegister<_T>>
         static inline _VECTOR_REGISTER_TYPE SIMDAdd(const _VECTOR_REGISTER_TYPE& a, const _VECTOR_REGISTER_TYPE& b) noexcept
         {
             if constexpr (std::is_same_v<_T, float>)
@@ -136,7 +139,7 @@ namespace IE {
                 return _mm256_add_pd(a, b);
         }
 
-        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T>>
+        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::SIMDVectorRegister<_T>>
         static inline _VECTOR_REGISTER_TYPE SIMDSub(const _VECTOR_REGISTER_TYPE& a, const _VECTOR_REGISTER_TYPE& b) noexcept
         {
             if constexpr (std::is_same_v<_T, float>)
@@ -149,7 +152,7 @@ namespace IE {
                 return _mm256_sub_pd(a, b);
         }
 
-        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T>>
+        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::SIMDVectorRegister<_T>>
         static inline _VECTOR_REGISTER_TYPE SIMDMul(const _VECTOR_REGISTER_TYPE& a, const _VECTOR_REGISTER_TYPE& b) noexcept
         {
             if constexpr (std::is_same_v<_T, float>)
@@ -162,7 +165,7 @@ namespace IE {
                 return _mm256_mul_pd(a, b);
         }
 
-        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T>>
+        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::SIMDVectorRegister<_T>>
         static inline _VECTOR_REGISTER_TYPE SIMDDiv(const _VECTOR_REGISTER_TYPE& a, const _VECTOR_REGISTER_TYPE& b) noexcept
         {
             if constexpr (std::is_same_v<_T, float>)
@@ -175,7 +178,7 @@ namespace IE {
                 return _mm256_div_pd(a, b);
         }
 
-        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T>>
+        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::SIMDVectorRegister<_T>>
         static inline void SIMDStore(_T* src, const _VECTOR_REGISTER_TYPE& sseVec) noexcept
         {
             if constexpr (std::is_same_v<_T, float>)
@@ -186,7 +189,7 @@ namespace IE {
                 _mm256_store_pd(src, sseVec);
         }
 
-        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T>>
+        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::SIMDVectorRegister<_T>>
         static inline _VECTOR_REGISTER_TYPE SIMDLoad(_T* src) noexcept
         {
             if constexpr (std::is_same_v<_T, float>)
@@ -197,7 +200,7 @@ namespace IE {
                 return _mm256_load_pd(src);
         }
 
-        template <::IE::Internal::SIMDVectorable _T, int INDEX, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T>>
+        template <::IE::Internal::SIMDVectorable _T, int INDEX, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::SIMDVectorRegister<_T>>
         static inline _T SIMDExtractElement(const _VECTOR_REGISTER_TYPE& sseVector) noexcept
         {
             if constexpr (std::is_same_v<_T, float>) {
@@ -222,7 +225,7 @@ namespace IE {
             }
         }
 
-        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T>>
+        template <::IE::Internal::SIMDVectorable _T, typename _VECTOR_REGISTER_TYPE = ::IE::Internal::SIMDVectorRegister<_T>>
         static inline _T SIMDDotProduct(const _VECTOR_REGISTER_TYPE& a, const _VECTOR_REGISTER_TYPE& b) noexcept
         {
             if constexpr (std::is_same_v<_T, float>)
@@ -247,9 +250,9 @@ namespace IE {
     // | Math Library | --> | Vector (4D) |
     // +--------------+     +-------------+
 
-    template <typename _T = int>
+    template <::IE::arithmetic _T = int>
     class Vector {
-        using _VECTOR_REGISTER_TYPE = ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_T>;
+        using _VECTOR_REGISTER_TYPE = ::IE::Internal::SIMDVectorRegister<_T>;
 
     public:
         union {
@@ -264,7 +267,7 @@ namespace IE {
 
 #ifdef __OP__ENABLE_SIMD
         template <::IE::Internal::SIMDVectorable _U = _T>
-        Vector(const ::IE::Internal::GET_SIMD_VECTOR_REGISTER_TYPE<_U>& other) {
+        Vector(const ::IE::Internal::SIMDVectorRegister<_U>& other) {
             if constexpr (std::is_same_v<_T, _U>) {
                 this->m_simdRegister = other;
             } else {
@@ -292,7 +295,7 @@ namespace IE {
         // | Math Library | --> | Vector (4D) | --> | Operators: +=, -=, *=, /= |
         // +--------------+     +-------------+     +---------------------------+
 
-        template <typename _U>
+        template <::IE::arithmetic _U>
         inline void operator+=(const Vector<_U>& other) noexcept {
             if constexpr (::IE::Internal::CAN_PERFORM_SIMD_VECTOR_OPERATIONS<_T, _U>()) {
 #ifdef __OP__ENABLE_SIMD
@@ -303,7 +306,7 @@ namespace IE {
             }
         }
 
-        template <typename _U>
+        template <::IE::arithmetic _U>
         inline void operator-=(const Vector<_U>& other) noexcept {
             if constexpr (::IE::Internal::CAN_PERFORM_SIMD_VECTOR_OPERATIONS<_T, _U>()) {
 #ifdef __OP__ENABLE_SIMD
@@ -314,7 +317,7 @@ namespace IE {
             }
         }
 
-        template <typename _U>
+        template <::IE::arithmetic _U>
         inline void operator*=(const Vector<_U>& other) noexcept {
             if constexpr (::IE::Internal::CAN_PERFORM_SIMD_VECTOR_OPERATIONS<_T, _U>()) {
 #ifdef __OP__ENABLE_SIMD
@@ -325,7 +328,7 @@ namespace IE {
             }
         }
 
-        template <typename _U>
+        template <::IE::arithmetic _U>
         inline void operator/=(const Vector<_U>& other) noexcept {
             if constexpr (::IE::Internal::CAN_PERFORM_SIMD_VECTOR_OPERATIONS<_T, _U>()) {
 #ifdef __OP__ENABLE_SIMD
@@ -358,13 +361,13 @@ namespace IE {
         // | Math Library | --> | Vector (4D) | --> | Static Function Operations |
         // +--------------+     +-------------+     +----------------------------+
 
-        template <typename _T_A>
+        template <::IE::arithmetic _T_A>
 		inline static ::IE::Vector<_T_A> Normalized(const ::IE::Vector<_T_A>& vec) noexcept
 		{
 			return vec / vec.GetLength();
 		}
 
-		template <typename _T_A, typename _T_B>
+		template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B>
 		inline static auto CrossProduct3D(const ::IE::Vector<_T_A>& vecA, const ::IE::Vector<_T_B>& vecB) noexcept
 			-> ::IE::Vector<decltype(vecA.x + vecB.x)>
 		{
@@ -387,7 +390,7 @@ namespace IE {
 			}
 		}
 
-		template <typename _T_A, typename _T_B>
+		template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B>
 		static inline auto DotProduct(const ::IE::Vector<_T_A>& a, const ::IE::Vector<_T_B>& b) noexcept
 			-> decltype(a.x + b.x)
 		{
@@ -400,7 +403,7 @@ namespace IE {
 			}
 		}
 
-		template <typename _T_A, typename _T_B>
+		template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B>
 		static inline auto GetReflected(const ::IE::Vector<_T_A>& in, const ::IE::Vector<_T_B>& normal) noexcept
 			-> ::IE::Vector<decltype(in.x + normal.x)>
 		{
@@ -412,7 +415,7 @@ namespace IE {
     // | Math Library | --> | Vector (4D) | --> | Operators: +, -, *, /          |
     // +--------------+     +-------------+     +--------------------------------+
 
-    template <typename _T_A, typename _T_B>
+    template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B>
     inline auto operator+(const ::IE::Vector<_T_A>& a, const ::IE::Vector<_T_B>& b) noexcept
         -> Vector<decltype(a.x + b.x)>
     {
@@ -427,7 +430,7 @@ namespace IE {
         }
     }
 
-    template <typename _T_A, typename _T_B>
+    template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B>
     inline auto operator-(const ::IE::Vector<_T_A>& a, const ::IE::Vector<_T_B>& b) noexcept
         -> Vector<decltype(a.x - b.x)>
     {
@@ -442,7 +445,7 @@ namespace IE {
         }
     }
 
-    template <typename _T_A, typename _T_B>
+    template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B>
     inline auto operator*(const ::IE::Vector<_T_A>& a, const ::IE::Vector<_T_B>& b) noexcept
         -> Vector<decltype(a.x * b.x)>
     {
@@ -457,7 +460,7 @@ namespace IE {
         }
     }
 
-    template <typename _T_A, typename _T_B>
+    template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B>
     inline auto operator/(const ::IE::Vector<_T_A>& a, const ::IE::Vector<_T_B>& b) noexcept
         -> Vector<decltype(a.x / b.x)>
     {
@@ -472,7 +475,7 @@ namespace IE {
         }
     }
 
-    template <typename _T>
+    template <::IE::arithmetic _T>
 	inline std::ostream& operator<<(std::ostream& stream, const ::IE::Vector<_T>& vec) noexcept
 	{
 		stream << "(" << vec.x << ", " << vec.y << ", " << vec.z << ", " << vec.w << ")";
@@ -512,7 +515,7 @@ namespace IE {
 	 * |-------------------|-------------------|-------------------|-------------------|
 	 */
 
-	template <typename _T>
+	template <::IE::arithmetic _T>
 	class Matrix
 	{
 	private:
@@ -677,7 +680,7 @@ namespace IE {
     // | Math Library | --> | Matrix (4x4) | --> | Operators: * |
     // +--------------+     +--------------+     +--------------+
 
-	template <typename _T, typename _T_2>
+	template <::IE::arithmetic _T, ::IE::arithmetic _T_2>
 	inline auto operator*(const ::IE::Matrix<_T>& matA, const ::IE::Matrix<_T_2>& matB) noexcept
 		-> ::IE::Matrix<decltype(matA[0] + matB[0])>
 	{
@@ -705,7 +708,7 @@ namespace IE {
 	   |------------------------|   |----------------------------------------|   |----------------------------|
 	 */
 
-	template <typename _T, typename _T_2>
+	template <::IE::arithmetic _T, ::IE::arithmetic _T_2>
 	inline auto operator*(const ::IE::Vector<_T>& vec, const ::IE::Matrix<_T_2>& mat) noexcept
 		-> ::IE::Vector<decltype(vec.x + mat[0])>
 	{
@@ -721,7 +724,7 @@ namespace IE {
     // | Math Library | --> | Matrix (4x4) | --> | Printing |
     // +--------------+     +--------------+     +----------+
 
-	template <typename _T>
+	template <::IE::arithmetic _T>
 	inline std::ostream& operator<<(std::ostream& stream, const ::IE::Matrix<_T>& mat) noexcept
 	{
 		constexpr const size_t MAX_DIGITS = 5u;
