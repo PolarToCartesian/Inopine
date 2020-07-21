@@ -108,7 +108,12 @@
 	#pragma comment(lib, "User32.lib")
 
 	#include <Windowsx.h>
-#endif // #if defined(__IE__OS_WINDOWS)
+#elif defined(__IE__OS_LINUX) // end of #if defined(__IE__OS_WINDOWS)
+    // XLIB
+    #include <X11/Xos.h>
+    #include <X11/Xlib.h>
+    #include <X11/Xutil.h>
+#endif // end of #if defined(__IE__OS_LINUX)
 
 /* EN: The "IE" namespace contains all of Inopine Engine's source code in order          */
 /* EN: to prevent the conflicts of declarations and definitions in the root namespace.   */
@@ -861,7 +866,12 @@ namespace IE {
     private:
 #if defined(__IE__OS_WINDOWS)
         ::HWND m_windowHandle = NULL;
-#endif // #if defined(__IE__OS_WINDOWS)
+#elif defined(__IE__OS_LINUX) // end of #if defined(__IE__OS_WINDOWS)
+        ::Display* m_pDisplayHandle = nullptr;
+        ::Window   m_windowHandle;
+
+        ::Atom m_deleteMessage;
+#endif // end of #if defined(__IE__OS_LINUX)
 
         bool m_bIsRunning = false;
 
@@ -900,11 +910,35 @@ namespace IE {
             {
 #if defined(__IE__PLATFORM_X64)
                 SetWindowLongPtrA(this->m_windowHandle, GWLP_USERDATA, (LONG_PTR)this);
-#else
+#else // end of #if defined(__IE__PLATFORM_X64)
                 SetWindowLongA(this->m_windowHandle, GWLP_USERDATA, (LONG)this);
-#endif // #if defined(__IE__PLATFORM_X64)
+#endif// end of else
             }
-#endif // #if defined(__IE__OS_WINDOWS)
+#elif defined(__IE__OS_LINUX) // end of #if defined(__IE__OS_WINDOWS)
+            // Fetch Display
+            this->m_pDisplayHandle = ::XOpenDisplay(0);
+
+            if (this->m_pDisplayHandle == NULL) return;
+
+            // Create Window
+            this->m_windowHandle = ::XCreateSimpleWindow(this->m_pDisplayHandle, DefaultRootWindow(this->m_pDisplayHandle),
+                                                         0, 0, width, height, 0,
+                                                         BlackPixel(this->m_pDisplayHandle, 0), WhitePixel(this->m_pDisplayHandle, 0));
+
+            // Receive WM_DELETE_WINDOW messages
+            this->m_deleteMessage = ::XInternAtom(this->m_pDisplayHandle, "WM_DELETE_WINDOW", False);
+            ::XSetWMProtocols(this->m_pDisplayHandle, this->m_windowHandle, &this->m_deleteMessage, 1);
+
+            // Set Title
+            ::XSetStandardProperties(this->m_pDisplayHandle, this->m_windowHandle, title, title, None, NULL, 0, NULL);
+
+            // Select Input Masks
+            constexpr const long xEventMasks = ExposureMask | StructureNotifyMask | // Window
+                                               PointerMotionMask | ButtonPressMask | ButtonReleaseMask | // Mouse
+                                               KeyPressMask | KeyReleaseMask; // Keyboard
+
+            ::XSelectInput(this->m_pDisplayHandle, this->m_windowHandle, xEventMasks);
+#endif // end of #if defined(__IE__OS_LINUX)
 
             this->Show();
 
@@ -915,15 +949,25 @@ namespace IE {
         {
 #if defined(__IE__OS_WINDOWS)
             return ::ShowWindow(this->m_windowHandle, SW_SHOW);
-#endif // #if defined(__IE__OS_WINDOWS)
+#elif defined(__IE__OS_LINUX) // end of #if defined(__IE__OS_WINDOWS)
+            ::XMapWindow(this->m_pDisplayHandle, this->m_windowHandle);
+            ::XFlush(this->m_pDisplayHandle);
+
+            return true;
+#endif // end of #if defined(__IE__OS_LINUX)
         }
         
         bool Minimize() const noexcept
         {
 #if defined(__IE__OS_WINDOWS)
             return ::ShowWindow(this->m_windowHandle, SW_MINIMIZE);
-#endif // #if defined(__IE__OS_WINDOWS)
-        }
+#elif defined(__IE__OS_LINUX) // end of #if defined(__IE__OS_WINDOWS)
+            ::XUnmapWindow(this->m_pDisplayHandle, this->m_windowHandle);
+            ::XFlush(this->m_pDisplayHandle);
+
+            return true;
+#endif // end of #if defined(__IE__OS_LINUX)       
+       }
 
         inline bool IsRunning() const noexcept { return this->m_bIsRunning; }
 
@@ -935,7 +979,29 @@ namespace IE {
                 ::TranslateMessage(&msg);
                 ::DispatchMessageA(&msg);
             }
-#endif // #if defined(__IE__OS_WINDOWS)
+#elif defined(__IE__OS_LINUX) // end of #if defined(__IE__OS_WINDOWS)
+            // Process Events
+            ::XEvent xEvent;
+            while (XPending(this->m_pDisplayHandle))
+            {
+                XNextEvent(this->m_pDisplayHandle, &xEvent);
+
+                switch (xEvent.type) {
+                // Window Events
+                case DestroyNotify:
+                    this->Close();
+                    return;
+
+                case ClientMessage:
+                    if ((::Atom)xEvent.xclient.data.l[0] == this->m_deleteMessage) {
+                        this->Close();
+                        return;
+                    }
+
+                    break;
+                }
+            }
+#endif // end of #if defined(__IE__OS_LINUX)
         }
 
         void Close()
@@ -946,7 +1012,13 @@ namespace IE {
 
 #if defined(__IE__OS_WINDOWS)
             ::CloseWindow(this->m_windowHandle);
-#endif // #if defined(__IE__OS_WINDOWS)
+#elif defined(__IE__OS_LINUX) // end of #if defined(__IE__OS_WINDOWS)
+            // Destroy Window & Close Display
+            ::XDestroyWindow(this->m_pDisplayHandle, this->m_windowHandle);
+            ::XCloseDisplay(this->m_pDisplayHandle);
+
+            this->m_pDisplayHandle = nullptr;
+#endif // end of #elif defined(__IE__OS_LINUX)
 
             this->m_bIsRunning = false;
         }
