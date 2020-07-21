@@ -16,12 +16,17 @@
 
     Table Of Contents:
     |--+ C++ Library Includes
-    |--+ Non Standard Includes
     |--+ Defines
+    |--|--+ SIMD
+    |--|--+ OS / Target
+    |--+ Non Standard Includes
     |--+ SIMD Wrapper
     |--|--+ SIMD Register Wrapper
     |--|--+ SIMD Operations
-
+    |--+ Window System
+    |--+ Error Checking Codes
+    |--|--+ CRC
+    |--|--+ ALDER-32
 */
 
 // +----------------------+
@@ -30,6 +35,7 @@
 
 #include <cmath>
 #include <array>       // Since C++11
+#include <cassert>
 #include <limits>
 #include <cstdint>
 #include <cstring>
@@ -39,25 +45,70 @@
 #include <concepts>    // Since C++20
 #include <type_traits> // Since C++11 (w/ C++17 Helper Classes)
 
-// +-----------------------+
-// | Non Standard Includes |
-// +-----------------------+
-
-#ifndef __IE__DISABLE_SIMD
-
-    #include <immintrin.h> // Used for simd types and instructions
-
-#endif // #ifndef __IE__DISABLE_SIMD
-
 // +---------+
 // | Defines |
 // +---------+
 
-#ifndef __IE__DISABLE_SIMD
+// +---------+     +------+
+// | Defines | --> | SIMD |
+// +---------+     +------+
 
+#if !defined(__IE__DISABLE_SIMD)
     #define __IE__ENABLE_SIMD
+#endif // #if !defined(__IE__DISABLE_SIMD)
 
+// +---------+     +-------------+
+// | Defines | --> | OS / Target |
+// +---------+     +-------------+
+
+#if defined(_WIN32)
+    #define __IE__OS_WINDOWS
+
+    #ifdef _WIN64
+        #define __IE__PLATFORM_X64
+    #else
+        #define __IE__PLATFORM_X86
+    #endif
+#elif defined(__ANDROID__)
+    #define __IE__OS_ANDROID
+#elif defined(__linux__)
+    #define __IE__OS_LINUX
+#elif defined(__APPLE__) && defined(__MACH__)
+    #include <TargetConditionals.h>
+
+    #if TARGET_IPHONE_SIMULATOR
+        #define __IE__OS_IOS
+    #elif TARGET_OS_IPHONE == 1
+        #define __IE__OS_IOS
+    #elif TARGET_OS_MAC == 1
+        #define __IE__OS_OSX
+    #else
+        #error You Target Apple Device Could Not Be Resolved
+    #endif
+#else
+    #error The Weiss Engine Could Not Determine Your Target OS
+#endif
+
+#if defined(_NDEBUG) || defined(NDEBUG)
+    #define __IE__RELEASE_MODE
+#else // end of #if defined(_NDEBUG) || defined(NDEBUG)
+    #define __IE__DEBUG_MODE
+#endif
+
+// +-----------------------+
+// | Non Standard Includes |
+// +-----------------------+
+
+#if defined(__IE__ENABLE_SIMD)
+    #include <immintrin.h> // Used for simd types and instructions
 #endif // #ifndef __IE__DISABLE_SIMD
+
+#if defined(__IE__OS_WINDOWS)
+	#include <Windows.h>
+	#pragma comment(lib, "User32.lib")
+
+	#include <Windowsx.h>
+#endif // #if defined(__IE__OS_WINDOWS)
 
 /* EN: The "IE" namespace contains all of Inopine Engine's source code in order          */
 /* EN: to prevent the conflicts of declarations and definitions in the root namespace.   */
@@ -381,9 +432,9 @@ namespace IE {
 
         inline float GetLength() const noexcept {
             if constexpr (::IE::Internal::CAN_PERFORM_SIMD_VECTOR_OPERATIONS<_T>()) {
-#ifndef __WEISS__DISABLE_SIMD
+#ifndef __IE__DISABLE_SIMD
                 return std::sqrt(::IE::Internal::SIMDDotProduct<_T>(this->m_simdRegister, this->m_simdRegister));
-#endif // #ifndef __WEISS__DISABLE_SIMD
+#endif // #ifndef __IE__DISABLE_SIMD
 			} else {
 				return std::sqrt(this->x * this->x + this->y * this->y + this->z * this->z + this->w * this->w);
 			}
@@ -408,14 +459,14 @@ namespace IE {
 			-> ::IE::Vector<decltype(vecA.x + vecB.x)>
 		{
 			if constexpr (::IE::Internal::CAN_PERFORM_SIMD_VECTOR_OPERATIONS<_T_A, _T_B>()) {
-#ifndef __WEISS__DISABLE_SIMD
+#ifndef __IE__DISABLE_SIMD
 				const ::IE::Vector<_T_A> tempA1(vecA.y, vecA.z, vecA.x, 0);
 				const ::IE::Vector<_T_A> tempB1(vecB.z, vecB.x, vecB.y, 0);
 				const ::IE::Vector<_T_A> tempA2(vecA.z, vecA.x, vecA.y, 0);
 				const ::IE::Vector<_T_A> tempB2(vecB.y, vecB.z, vecB.x, 0);
 
 				return tempA1 * tempB1 - tempA2 * tempB2;
-#endif // #ifndef __WEISS__DISABLE_SIMD
+#endif // #ifndef __IE__DISABLE_SIMD
 			} else {
 				return ::IE::Vector<decltype(vecA.x + vecB.x)>(
 					vecA.y * vecB.z - vecA.z * vecB.y,
@@ -431,9 +482,9 @@ namespace IE {
 			-> decltype(a.x + b.x)
 		{
 			if constexpr (::IE::Internal::CAN_PERFORM_SIMD_VECTOR_OPERATIONS<_T_A, _T_B>()) {
-#ifndef __WEISS__DISABLE_SIMD
+#ifndef __IE__DISABLE_SIMD
 				return ::IE::Internal::SIMDDotProduct<_T_A>(a.m_simdRegister, b.m_simdRegister);
-#endif // #ifndef __WEISS__DISABLE_SIMD
+#endif // #ifndef __IE__DISABLE_SIMD
 			} else {
 				return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 			}
@@ -796,13 +847,149 @@ namespace IE {
 
 	typedef ::IE::Matrix<std::enable_if_t<std::numeric_limits<float>::is_iec559, float>> Matf32;
 
+    // +---------------+
+    // | Window System |
+    // +---------------+
+
+#if defined(__IE__OS_WINDOWS)
+
+    static ::LRESULT CALLBACK WindowsWindowWindowProc(::HWND hwnd, ::UINT msg, ::WPARAM wParam, ::LPARAM lParam);
+
+#endif // #if defined(__IE__OS_WINDOWS)
+
+    class Window {
+    private:
+#if defined(__IE__OS_WINDOWS)
+        ::HWND m_windowHandle = NULL;
+#endif // #if defined(__IE__OS_WINDOWS)
+
+        bool m_bIsRunning = false;
+
+    public:
+        Window(const std::uint16_t width, const std::uint16_t height, const char* title) noexcept
+        {
+#if defined(__IE__OS_WINDOWS)
+            const ::HINSTANCE hInstance = GetModuleHandle(NULL);
+            
+            // Step 1 : Register Window Class
+            ::WNDCLASSA wc = { };
+            {
+                wc.lpfnWndProc   = ::IE::WindowsWindowWindowProc;
+                wc.hInstance     = hInstance;
+                wc.lpszClassName = "IE's Windows Window Class";
+                
+                ::RegisterClassA(&wc);
+            }
+
+            // Step 2 : Create Window
+            {
+                // Get The Desired Window Rect From The desired Client Rect
+                ::RECT rect{ 0u, 0u, width, height };
+                if (::AdjustWindowRect(&rect, NULL, false) == 0)
+                    return;
+
+                // Create Window
+                this->m_windowHandle = ::CreateWindowExA(NULL, wc.lpszClassName, title, WS_OVERLAPPEDWINDOW,
+                                                         CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
+                                                         NULL, NULL, hInstance, NULL);
+
+                if (this->m_windowHandle == NULL) return;
+            }
+
+            // Step 4 : Set Window Pointer To "this"
+            {
+#if defined(__IE__PLATFORM_X64)
+                SetWindowLongPtrA(this->m_windowHandle, GWLP_USERDATA, (LONG_PTR)this);
+#else
+                SetWindowLongA(this->m_windowHandle, GWLP_USERDATA, (LONG)this);
+#endif // #if defined(__IE__PLATFORM_X64)
+            }
+#endif // #if defined(__IE__OS_WINDOWS)
+
+            this->Show();
+
+            this->m_bIsRunning = true;
+        }
+
+        bool Show() const noexcept
+        {
+#if defined(__IE__OS_WINDOWS)
+            return ::ShowWindow(this->m_windowHandle, SW_SHOW);
+#endif // #if defined(__IE__OS_WINDOWS)
+        }
+        
+        bool Minimize() const noexcept
+        {
+#if defined(__IE__OS_WINDOWS)
+            return ::ShowWindow(this->m_windowHandle, SW_MINIMIZE);
+#endif // #if defined(__IE__OS_WINDOWS)
+        }
+
+        inline bool IsRunning() const noexcept { return this->m_bIsRunning; }
+
+        void Update() noexcept
+        {
+#if defined(__IE__OS_WINDOWS)
+            ::MSG msg = { };
+            while (PeekMessage(&msg, this->m_windowHandle, 0, 0, PM_REMOVE) > 0) {
+                ::TranslateMessage(&msg);
+                ::DispatchMessageA(&msg);
+            }
+#endif // #if defined(__IE__OS_WINDOWS)
+        }
+
+        void Close()
+        {
+#if defined(__IE__DEBUG_MODE)
+            assert(this->m_bIsRunning);
+#endif // #if defined(__IE__DEBUG_MODE)
+
+#if defined(__IE__OS_WINDOWS)
+            ::CloseWindow(this->m_windowHandle);
+#endif // #if defined(__IE__OS_WINDOWS)
+
+            this->m_bIsRunning = false;
+        }
+
+        ~Window() noexcept
+        {
+            if (this->m_bIsRunning)
+                this->Close();
+        }
+
+    }; // Window
+
+#if defined(__IE__OS_WINDOWS)
+
+    static ::LRESULT CALLBACK WindowsWindowWindowProc(::HWND hwnd, ::UINT msg, ::WPARAM wParam, ::LPARAM lParam)
+    {
+#ifdef __IE__PLATFORM_X64
+        Window* pWindow = reinterpret_cast<::IE::Window*>(GetWindowLongPtrA(hwnd, GWLP_USERDATA));
+#else
+        Window* pWindow = reinterpret_cast<::IE::Window*>(GetWindowLongA(hwnd, GWLP_USERDATA));
+#endif
+
+        if (pWindow != nullptr) {
+            switch (msg) {
+            case WM_DESTROY:
+                pWindow->Close();
+
+                return 0;
+            }
+        }
+
+        return ::DefWindowProcA(hwnd, msg, wParam, lParam);
+    }
+
+#endif // #if defined(__IE__OS_WINDOWS)
+
     // +----------------------+
     // | Error Checking Codes |
     // +----------------------+
 
-    // +----------------------+     +--------+
-    // | Error Checking Codes | --> | CRC-32 |
-    // +----------------------+     +--------+
+    // +----------------------+     +-----+
+    // | Error Checking Codes | --> | CRC |
+    // +----------------------+     +-----+
 
     template <::IE::arithmetic _T, std::uint64_t _POLY>
     struct CRC {
