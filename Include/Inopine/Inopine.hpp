@@ -890,6 +890,15 @@ namespace IE {
 
         ::IE::Vecu16 m_clientDimensions{ 0, 0 };
 
+        struct KeyboardData {
+            // Holds wether or not a key is down
+            std::array<bool, 0xFE> m_keyStates = { false };
+        } m_keyboardData;
+
+       //struct MousePointerData {
+       //
+       //} m_mousePointerData;
+
         bool m_bIsRunning = false;
 
     public:
@@ -933,6 +942,7 @@ namespace IE {
 #endif// end of else
             }
 #elif defined(__IE__OS_LINUX) // end of #if defined(__IE__OS_WINDOWS)
+
             // Fetch Display
             this->m_pDisplayHandle = ::XOpenDisplay(0);
 
@@ -989,6 +999,9 @@ namespace IE {
 
         inline bool IsRunning() const noexcept { return this->m_bIsRunning; }
 
+        inline bool IsKeyUp  (const std::uint8_t key) const noexcept { return !this->m_keyboardData.m_keyStates[key]; }
+        inline bool IsKeyDown(const std::uint8_t key) const noexcept { return this->m_keyboardData.m_keyStates[key];  }
+
         inline ::IE::Vecu16  GetClientDimensions() const noexcept { return this->m_clientDimensions;   }
         inline std::uint16_t GetClientWidth()      const noexcept { return this->m_clientDimensions.x; }
         inline std::uint16_t GetClientHeight()     const noexcept { return this->m_clientDimensions.y; }
@@ -1024,6 +1037,15 @@ namespace IE {
                         this->Close();
                         return;
                     }
+
+                    break;
+                // Keyboard Events
+                case KeyPress:
+                    this->m_keyboardData.m_keyStates[std::toupper(XLookupKeysym(&xEvent.xkey, 0))] = true;
+
+                    break;
+                case KeyRelease:
+                    this->m_keyboardData.m_keyStates[std::toupper(XLookupKeysym(&xEvent.xkey, 0))] = false;
 
                     break;
                 }
@@ -1063,9 +1085,9 @@ namespace IE {
     static ::LRESULT CALLBACK WindowsWindowWindowProc(::HWND hwnd, ::UINT msg, ::WPARAM wParam, ::LPARAM lParam)
     {
 #ifdef __IE__PLATFORM_X64
-        Window* pWindow = reinterpret_cast<::IE::Window*>(GetWindowLongPtrA(hwnd, GWLP_USERDATA));
+        Window* pWindow = reinterpret_cast<::IE::Window*>(::GetWindowLongPtrA(hwnd, GWLP_USERDATA));
 #else // end of #ifdef __IE__PLATFORM_X64
-        Window* pWindow = reinterpret_cast<::IE::Window*>(GetWindowLongA(hwnd, GWLP_USERDATA));
+        Window* pWindow = reinterpret_cast<::IE::Window*>(::GetWindowLongA(hwnd, GWLP_USERDATA));
 #endif // end of #else
 
         if (pWindow != nullptr) {
@@ -1079,7 +1101,16 @@ namespace IE {
 
                 return 0;
             case WM_DESTROY:
-                pWindow->Close();
+                window.Close();
+
+                return 0;
+            // Keyboard Events
+            case WM_KEYDOWN:
+                window.m_keyboardData.m_keyStates[(std::uint8_t)wParam] = true;
+
+                return 0;
+            case WM_KEYUP:
+                window.m_keyboardData.m_keyStates[(std::uint8_t)wParam] = false;
 
                 return 0;
             }
