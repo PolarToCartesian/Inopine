@@ -567,6 +567,18 @@ namespace IE {
         }
     }
 
+    template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B>
+    inline bool operator==(const ::IE::Vector<_T_A>& a, const ::IE::Vector<_T_B>& b) noexcept
+    {
+        return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+    }
+
+    template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B>
+    inline bool operator!=(const ::IE::Vector<_T_A>& a, const ::IE::Vector<_T_B>& b) noexcept
+    {
+        return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+    }
+
     template <::IE::arithmetic _T>
 	inline std::ostream& operator<<(std::ostream& stream, const ::IE::Vector<_T>& vec) noexcept
 	{
@@ -863,6 +875,9 @@ namespace IE {
 #endif // #if defined(__IE__OS_WINDOWS)
 
     class Window {
+#if defined(__IE__OS_WINDOWS)
+        friend static ::LRESULT CALLBACK ::IE::WindowsWindowWindowProc(::HWND hwnd, ::UINT msg, ::WPARAM wParam, ::LPARAM lParam);
+#endif // #if defined(__IE__OS_WINDOWS)
     private:
 #if defined(__IE__OS_WINDOWS)
         ::HWND m_windowHandle = NULL;
@@ -873,10 +888,13 @@ namespace IE {
         ::Atom m_deleteMessage;
 #endif // end of #if defined(__IE__OS_LINUX)
 
+        ::IE::Vecu16 m_clientDimensions{ 0, 0 };
+
         bool m_bIsRunning = false;
 
     public:
         Window(const std::uint16_t width, const std::uint16_t height, const char* title) noexcept
+            : m_clientDimensions(width, height)
         {
 #if defined(__IE__OS_WINDOWS)
             const ::HINSTANCE hInstance = GetModuleHandle(NULL);
@@ -895,7 +913,7 @@ namespace IE {
             {
                 // Get The Desired Window Rect From The desired Client Rect
                 ::RECT rect{ 0u, 0u, width, height };
-                if (::AdjustWindowRect(&rect, NULL, false) == 0)
+                if (::AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, false) == 0)
                     return;
 
                 // Create Window
@@ -971,6 +989,10 @@ namespace IE {
 
         inline bool IsRunning() const noexcept { return this->m_bIsRunning; }
 
+        inline ::IE::Vecu16  GetClientDimensions() const noexcept { return this->m_clientDimensions;   }
+        inline std::uint16_t GetClientWidth()      const noexcept { return this->m_clientDimensions.x; }
+        inline std::uint16_t GetClientHeight()     const noexcept { return this->m_clientDimensions.y; }
+
         void Update() noexcept
         {
 #if defined(__IE__OS_WINDOWS)
@@ -988,6 +1010,11 @@ namespace IE {
 
                 switch (xEvent.type) {
                 // Window Events
+                case ConfigureNotify:
+                    this->m_clientDimensions.x = xEvent.xconfigure.width;
+                    this->m_clientDimensions.y = xEvent.xconfigure.height;
+
+                    break;
                 case DestroyNotify:
                     this->Close();
                     return;
@@ -1037,12 +1064,20 @@ namespace IE {
     {
 #ifdef __IE__PLATFORM_X64
         Window* pWindow = reinterpret_cast<::IE::Window*>(GetWindowLongPtrA(hwnd, GWLP_USERDATA));
-#else
+#else // end of #ifdef __IE__PLATFORM_X64
         Window* pWindow = reinterpret_cast<::IE::Window*>(GetWindowLongA(hwnd, GWLP_USERDATA));
-#endif
+#endif // end of #else
 
         if (pWindow != nullptr) {
+            Window& window = *pWindow;
+
             switch (msg) {
+            // Window Events
+            case WM_SIZE:
+                window.m_clientDimensions.x = GET_X_LPARAM(lParam);
+                window.m_clientDimensions.y = GET_Y_LPARAM(lParam);
+
+                return 0;
             case WM_DESTROY:
                 pWindow->Close();
 
