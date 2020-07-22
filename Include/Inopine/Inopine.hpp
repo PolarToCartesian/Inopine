@@ -159,7 +159,7 @@ namespace IE {
         using SIMDVectorRegister = typename std::conditional_t<std::is_same_v<_T, float>,   __m128,
 						           typename std::conditional_t<std::is_same_v<_T, int32_t>, __m128i,
 						           typename std::conditional_t<std::is_same_v<_T, int16_t>, __m128i,
-						           typename std::conditional_t<std::is_same_v<_T, double>,  __m256d, ::IE::Internal::SIMDNoVectorRegister>>>>;;
+						           typename std::conditional_t<std::is_same_v<_T, double>,  __m256d, ::IE::Internal::SIMDNoVectorRegister>>>>;
 
 #endif
         
@@ -323,7 +323,7 @@ namespace IE {
 
 #endif // #ifdef __IE__ENABLE_SIMD
 
-    }; // Internal
+    } // Internal
 
     // +--------------+
     // | Math Library |
@@ -359,7 +359,8 @@ namespace IE {
 
 #ifdef __OP__ENABLE_SIMD
         template <::IE::Internal::SIMDVectorable _U = _T>
-        Vector(const ::IE::Internal::SIMDVectorRegister<_U>& other) {
+        Vector(const ::IE::Internal::SIMDVectorRegister<_U>& other)
+        {
             if constexpr (std::is_same_v<_T, _U>) {
                 this->m_simdRegister = other;
             } else {
@@ -373,7 +374,8 @@ namespace IE {
         }
 #endif // #ifdef __OP__ENABLE_SIMD 
 
-        Vector(const _T x = 0, const _T y = 0, const _T z = 0, const _T w = 0) noexcept {
+        Vector(const _T x = 0, const _T y = 0, const _T z = 0, const _T w = 0) noexcept
+        {
             if constexpr (::IE::Internal::CAN_PERFORM_SIMD_VECTOR_OPERATIONS<_T>()) {
 #ifdef __OP__ENABLE_SIMD
                 this->m_simdRegister = ::IE::Internal::SIMDSet<_T>(x, y, z, w);
@@ -895,9 +897,12 @@ namespace IE {
             std::array<bool, 0xFE> m_keyStates = { false };
         } m_keyboardData;
 
-       //struct MousePointerData {
-       //
-       //} m_mousePointerData;
+        struct MousePointerData {
+            bool m_bLeftButtonDown  = false;
+            bool m_bRightButtonDown = false;
+
+            ::IE::Vecu16 m_relativeCursorPosition{ 0u, 0u };
+        } m_mousePointerData;
 
         bool m_bIsRunning = false;
 
@@ -999,9 +1004,19 @@ namespace IE {
 
         inline bool IsRunning() const noexcept { return this->m_bIsRunning; }
 
+        // Keyboard
         inline bool IsKeyUp  (const std::uint8_t key) const noexcept { return !this->m_keyboardData.m_keyStates[key]; }
         inline bool IsKeyDown(const std::uint8_t key) const noexcept { return this->m_keyboardData.m_keyStates[key];  }
 
+        // Mouse
+        inline bool IsLeftButtonUp()    const noexcept { return !this->m_mousePointerData.m_bLeftButtonDown;  }
+        inline bool IsLeftButtonDown()  const noexcept { return this->m_mousePointerData.m_bLeftButtonDown;   }
+        inline bool IsRightButtonUp()   const noexcept { return !this->m_mousePointerData.m_bRightButtonDown; }
+        inline bool IsRightButtonDown() const noexcept { return this->m_mousePointerData.m_bRightButtonDown;  }
+
+        inline ::IE::Vecu16 GetRelativeCursorPosition() const noexcept { return this->m_mousePointerData.m_relativeCursorPosition; }
+
+        // Window Dimensions
         inline ::IE::Vecu16  GetClientDimensions() const noexcept { return this->m_clientDimensions;   }
         inline std::uint16_t GetClientWidth()      const noexcept { return this->m_clientDimensions.x; }
         inline std::uint16_t GetClientHeight()     const noexcept { return this->m_clientDimensions.y; }
@@ -1036,6 +1051,36 @@ namespace IE {
                     if ((::Atom)xEvent.xclient.data.l[0] == this->m_deleteMessage) {
                         this->Close();
                         return;
+                    }
+
+                    break;
+                // Mouse Events
+                case MotionNotify:
+                    this->m_mousePointerData.m_relativeCursorPosition = {
+                        static_cast<uint16_t>(xEvent.xmotion.x),
+                        static_cast<uint16_t>(xEvent.xmotion.y)
+                    };
+
+                    break;
+                case ButtonPress:
+                    switch (xEvent.xbutton.button) {
+                    case Button1:
+                        this->m_mousePointerData.m_bLeftButtonDown = true;
+                        break;
+                    case Button3:
+                        this->m_mousePointerData.m_bRightButtonDown = true;
+                        break;
+                    }
+
+                    break;
+                case ButtonRelease:
+                    switch (xEvent.xbutton.button) {
+                    case 1:
+                        this->m_mousePointerData.m_bLeftButtonDown = false;
+                        break;
+                    case 3:
+                        this->m_mousePointerData.m_bRightButtonDown = false;
+                        break;
                     }
 
                     break;
@@ -1096,12 +1141,38 @@ namespace IE {
             switch (msg) {
             // Window Events
             case WM_SIZE:
-                window.m_clientDimensions.x = GET_X_LPARAM(lParam);
-                window.m_clientDimensions.y = GET_Y_LPARAM(lParam);
+                window.m_clientDimensions = {
+                    static_cast<uint16_t>(GET_X_LPARAM(lParam)),
+                    static_cast<uint16_t>(GET_Y_LPARAM(lParam))
+                };
 
                 return 0;
             case WM_DESTROY:
                 window.Close();
+
+                return 0;
+            // Mouse Events
+            case WM_MOUSEMOVE:
+                window.m_mousePointerData.m_relativeCursorPosition = {
+                    static_cast<uint16_t>(GET_X_LPARAM(lParam)),
+                    static_cast<uint16_t>(GET_Y_LPARAM(lParam))
+                };
+
+                return 0;
+            case WM_LBUTTONDOWN:
+                window.m_mousePointerData.m_bLeftButtonDown = true;
+
+                return 0;
+            case WM_LBUTTONUP:
+                window.m_mousePointerData.m_bLeftButtonDown = false;
+
+                return 0;
+            case WM_RBUTTONDOWN:
+                window.m_mousePointerData.m_bRightButtonDown = true;
+
+                return 0;
+            case WM_RBUTTONUP:
+                window.m_mousePointerData.m_bRightButtonDown = false;
 
                 return 0;
             // Keyboard Events
@@ -1204,4 +1275,4 @@ namespace IE {
         }
     };
 
-}; // IE
+} // IE
