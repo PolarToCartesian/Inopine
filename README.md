@@ -20,7 +20,7 @@
 
 + On **Linux**, run `make` to build and `./Inopine` to run the sample application.
 
---
+---
 
 **[FR]** Ce projet utilise [Git](https://git-scm.com/downloads) ainsi que [CMake](https://cmake.org/download/) sur *Windows*, *Linux* et *MacOSX*. *Git* récupère le code source du "dépôt" de code. *CMake* génère l'environnement de compilation.
 
@@ -35,3 +35,9 @@
 + Sur **Windows**, ouvrez le fichier Inopine.sln dans le répertoire Inopine/build/ avec *Visual Studio* où vous pouvez compiler & exécuter le code.
 
 + Sur **Linux**, exécuter `make` pour compiler et `./Inopine` pour exécuter l'application démo fournie.
+
+# License
+
+**[EN]** This project is licensed under [this license](LICENSE.md).
+
+**[FR]** La license de ce projet est [celle-ci](LICENSE.md)
