@@ -1,2 +1,4 @@
+build/
 build_lin/
 build_win/
+.vscode/settings.json
