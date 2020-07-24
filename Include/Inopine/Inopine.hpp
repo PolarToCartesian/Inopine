@@ -104,10 +104,14 @@
 #endif // #ifndef __IE__DISABLE_SIMD
 
 #if defined(__IE__OS_WINDOWS)
+    #define NOMINMAX // Prevent Windows.h from definig min() & max() macros
+
 	#include <Windows.h>
 	#pragma comment(lib, "User32.lib")
 
 	#include <Windowsx.h>
+
+    #undef NOMINMAX
 #elif defined(__IE__OS_LINUX) // end of #if defined(__IE__OS_WINDOWS)
     // XLIB
     #include <X11/Xos.h>
@@ -1209,7 +1213,7 @@ namespace IE {
                 std::array<_T, 256u> m_table;
 
             public:
-                CRCTable() noexcept {
+                constexpr CRCTable() noexcept {
                     // Calculate the CRC Table
                     for (int dividend = 0u; dividend < m_table.size(); dividend++) {
                         // Calculate Remainder With The Generator Polynomial
@@ -1226,25 +1230,26 @@ namespace IE {
                     }
                 }
 
-                inline const _T& operator[](const std::uint16_t n) const noexcept { return this->m_table[n]; }
+                constexpr inline const _T& operator[](const std::uint16_t n) const noexcept { return this->m_table[n]; }
             };
 
             // Allocate & Generate The Static CRC Table
-            static const CRCTable crcTable;
+            static constexpr CRCTable crcTable;
 
             /* EN: The "CRCTable" class is allocated as a "static" variable so that the crc look-up table                 */
             /* EN: can be computed once per template paramater pair. This let's us compute the tables once                */
-            /* EN: and only when they are needed.                                                                         */
+            /* EN: and only when they are needed. They are defined as "contexpr" so that they can be genrated at compile- */
+            /* EN: to take no overhead.                                                                                   */ 
             /* ---------------------------------------------------------------------------------------------------------- */
-            /* FR: La classe "CRCTable" est allouée en tant qu'objet statique afin que le tableau de "consultation"       */
-            /* FR: soit généré une seule fois par instantiation de la fonction lors de la compilation pour chaque paire   */
-            /* FR: d'arguments modèles. Cela permet de limiter le nombre de calcul de ces tables et de ne les génerer que */
-            /* FR: lorsque'elles sont nécessaires. */ 
+            /* FR: La classe "CRCTable" est allouée en tant qu'objet statique et "constexpr" afin que le tableau de "consultation"  */
+            /* FR: soit généré une seule fois par instantiation de la fonction lors de la compilation pour chaque paire             */
+            /* FR: d'arguments modèles. Cela permet de limiter le nombre de calcul de ces tables et de ne les génerer que           */
+            /* FR: lorsque'elles sont nécessaires lors de la compilation et non lors de l'éxecution du programme.                   */ 
 
             // Calculate CRC Value
             _T crcValue = std::numeric_limits<_T>::max();
             for (const uint8_t* pCurrent = data; pCurrent < data + len; pCurrent++) {
-                const _T lookupValue = crcTable[(crcValue ^ *pCurrent) & std::numeric_limits<_T>::max()];
+                const _T lookupValue = crcTable[(crcValue ^ *pCurrent) & std::numeric_limits<uint8_t>::max()];
 
                 crcValue = lookupValue ^ (crcValue >> 8u);
             }
