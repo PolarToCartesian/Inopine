@@ -11,9 +11,6 @@
     Repository.....https://www.github.com/PolarToCartesian/Inopine
     C++ Version....C++20
 
-    Thanks to:
-    - Intel Intrinsics Guide: https://software.intel.com/sites/landingpage/IntrinsicsGuide/
-
     Table Of Contents:
     |--+ C++ Library Includes
     |--+ Defines
@@ -119,11 +116,8 @@
     #include <X11/Xutil.h>
 #endif // end of #if defined(__IE__OS_LINUX)
 
-/* EN: The "IE" namespace contains all of Inopine Engine's source code in order          */
-/* EN: to prevent the conflicts of declarations and definitions in the root namespace.   */
-/* ------------------------------------------------------------------------------------- */
-/* FR: L'espace de nom "IE" contient le code source du moteur de rendu graphique Inopin� */
-/* FR: afin d'�viter les conflits de noms dans l'espace de nom � la racine.              */
+/* The "IE" namespace contains all of Inopine Engine's source code in order          */
+/* to prevent the conflicts of declarations and definitions in the root namespace.   */
 namespace IE {
 
     template <typename _T>
@@ -133,10 +127,8 @@ namespace IE {
     // | SIMD Wrapper |
     // +--------------+
 
-    /* EN: The "Internal" namespace contains code that shall be hidden to any user of  */
-    /* EN: the engine in order to keep the API simple and hide implementation details. */
-    /* FR: L'espace de nom "Internal" contient le code source du moteur graphique qui  */
-    /* FR: doit �tre cach� des utilisateurs pour garder l'interface plus simple.       */
+    /* The "Internal" namespace contains code that shall be hidden to any user of  */
+    /* the engine in order to keep the API simple and hide implementation details. */
     namespace Internal {
 
         struct SIMDNoVectorRegister {  };
@@ -145,12 +137,8 @@ namespace IE {
         // | SIMD Wrapper | --> | SIMD Register Wrapper |
         // +--------------+     +-----------------------+
 
-        /* EN: The templated "using" definition "SIMDVectorRegister" is used to determine at compile- */
-        /* EN: -time the intrinsics' vector register type that corresponds to the template parameter. */
-        /* ------------------------------------------------------------------------------------------ */
-        /* FR: La d�finition � mod�le de la d�claration "using" de "SIMDVectorRegister" nous permet   */
-        /* FR: de determiner le type du registre vectoriel qui correspond � l'argument mod�le pendant */
-        /* FR: la compilation.                                                                        */
+        /* The templated "using" definition "SIMDVectorRegister" is used to determine at compile- */
+        /* -time the intrinsics' vector register type that corresponds to the template parameter. */
 
 #ifdef __IE__DISABLE_SIMD
 
@@ -167,22 +155,15 @@ namespace IE {
 
 #endif
         
-        /* EN: The concept named "SIMDVectorable" enables us to check wether or not a vector register can be */
-        /* EN: Found/Used/Created at compile-time.                                                           */
-        /* ------------------------------------------------------------------------------------------------- */
-        /* FR: Le concept "SIMDVectorable" nous permet de detecter si le registre vectoriel peut �tre        */
-        /* FR: Trouv�/Utilis�/Cr�� lors de la compilation.                                                   */
+        /* The concept named "SIMDVectorable" enables us to check wether or not a vector register can be */
+        /* Found/Used/Created at compile-time.                                                           */
 
         template <typename _T>
         concept SIMDVectorable = !(std::is_same_v<::IE::Internal::SIMDVectorRegister<_T>,
                                                   ::IE::Internal::SIMDNoVectorRegister>);
 
-        /* EN: The role of the function "CAN_PERFORM_SIMD_VECTOR_OPERATIONS" is the same as the concept "SIMDVectorable" */
-        /* EN: but is defined as function "contexpr" function that can be ran at compile-time with two types.           */
-        /* ------------------------------------------------------------------------------------------------------------ */
-        /* FR: Le r�le de la function "CAN_PERFORM_SIMD_VECTOR_OPERATIONS" est le m�me que celui du concept             */
-        /* FR: "SIMDVectorable" mais elle est d�finie en tant qu'une fonction "contexpr" qui peut �tre ex�cut�e lors    */
-        /* FR: de la compilation. */
+        /* The role of the function "CAN_PERFORM_SIMD_VECTOR_OPERATIONS" is the same as the concept "SIMDVectorable" */
+        /* but is defined as function "contexpr" function that can be ran at compile-time with two types.           */
 
         template <::IE::arithmetic _T_A, ::IE::arithmetic _T_B = _T_A>
         static inline constexpr bool CAN_PERFORM_SIMD_VECTOR_OPERATIONS() noexcept
@@ -337,14 +318,9 @@ namespace IE {
     // | Math Library | --> | Vector (4D) |
     // +--------------+     +-------------+
 
-    /* EN: The templated "Vector" class represents a 4 dimensional mathematical vector of arithmitic types. This     */
-    /* EN: vector uses compile-time c++ "magic" to use SIMD intrinsics when possible and a "naive method" otherwise. */
-    /* EN: It also overloads the common mathematical operators like "+, -, *, and /" to make it easier to use.       */
-    /* ------------------------------------------------------------------------------------------------------------- */
-    /* FR: La classe mod�le "Vector" repr�sente un vecteur math�matique 4 dimensionel de type mod�le arithm�tiques.  */
-    /* FR: Ce vecteur utilise de la "magie" de c++ pour utiliser des instructions SIMD intrins�ques lors qu'il est   */
-    /* FR: possible et une m�thode "na�ve" sinon. Elle "surchage les op�rateurs" communs comme "+, -, * et /" afin   */
-    /* FR: rendre son utilisation plus simple.                                                                       */
+    /* The templated "Vector" class represents a 4 dimensional mathematical vector of arithmitic types. This     */
+    /* vector uses compile-time c++ "magic" to use SIMD intrinsics when possible and a "naive method" otherwise. */
+    /* It also overloads the common mathematical operators like "+, -, *, and /" to make it easier to use.       */
 
     template <::IE::arithmetic _T = int>
     class Vector {
@@ -1236,15 +1212,10 @@ namespace IE {
             // Allocate & Generate The Static CRC Table
             static constexpr CRCTable crcTable;
 
-            /* EN: The "CRCTable" class is allocated as a "static" variable so that the crc look-up table                 */
-            /* EN: can be computed once per template paramater pair. This let's us compute the tables once                */
-            /* EN: and only when they are needed. They are defined as "contexpr" so that they can be genrated at compile- */
-            /* EN: to take no overhead.                                                                                   */ 
-            /* ---------------------------------------------------------------------------------------------------------- */
-            /* FR: La classe "CRCTable" est allouée en tant qu'objet statique et "constexpr" afin que le tableau de "consultation"  */
-            /* FR: soit généré une seule fois par instantiation de la fonction lors de la compilation pour chaque paire             */
-            /* FR: d'arguments modèles. Cela permet de limiter le nombre de calcul de ces tables et de ne les génerer que           */
-            /* FR: lorsque'elles sont nécessaires lors de la compilation et non lors de l'éxecution du programme.                   */ 
+            /* The "CRCTable" class is allocated as a "static" variable so that the crc look-up table                 */
+            /* can be computed once per template paramater pair. This let's us compute the tables once                */
+            /* and only when they are needed. They are defined as "contexpr" so that they can be genrated at compile- */
+            /* to take no overhead.                                                                                   */ 
 
             // Calculate CRC Value
             _T crcValue = std::numeric_limits<_T>::max();
