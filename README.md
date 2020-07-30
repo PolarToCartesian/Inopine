@@ -8,7 +8,7 @@ You can view the table of contents in Inopine's [header file](Include/Inopine/In
 
 ## Getting Started
 
-+ Linux Packages (Ubuntu/Debian): `sudo apt-get update && sudo apt-get install git cmake make libx11-dev g++-10 valgrind`. Note that you can swap `g++-10` for your favorite compiler as long as it supports C++20/C++2a.
++ Linux Packages (Ubuntu/Debian): `sudo apt-get update && sudo apt-get install git cmake make libx11-dev g++-10 valgrind cppcheck`. Note that you can swap `g++-10` for your favorite compiler as long as it supports C++20/C++2a. Also note that valgrind and cppcheck are optional.
 + Windows Downloads: [Git](https://git-scm.com/downloads), [CMake](https://cmake.org/download/), [Visual Studio](https://visualstudio.microsoft.com/).
 
 
